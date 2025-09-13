@@ -39,4 +39,5 @@ urllib3==2.4.0
 vaderSentiment==3.3.2
 dj-database-url==2.2.0
 whitenoise==6.7.0
+gunicorn==21.2.0
 

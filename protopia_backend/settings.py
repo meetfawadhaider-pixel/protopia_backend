@@ -136,6 +136,7 @@ CORS_ALLOW_HEADERS = list(default_headers) + ["Authorization", "Content-Type"]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://protopia-frontend.vercel.app",
+    "https://protopiabackend-production.up.railway.app",  # added for Django admin login
 ]
 
 # ────────────────────────────────────────────────────────────────────────────────

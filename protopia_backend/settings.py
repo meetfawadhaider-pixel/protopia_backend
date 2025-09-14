@@ -1,38 +1,25 @@
 # protopia_backend/protopia_backend/settings.py
 import os
 from pathlib import Path
+from corsheaders.defaults import default_headers
+import dj_database_url
 
-# Optional .env loader for local dev
-try:
-    from dotenv import load_dotenv  # pip install python-dotenv
-except Exception:
-    load_dotenv = None
-
-# CORS defaults for custom headers
-from corsheaders.defaults import default_headers  # pip install django-cors-headers
-
-# Database URL parser
-import dj_database_url  # pip install dj-database-url
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ────────────────────────────────────────────────────────────────────────────────
 # Core
 # ────────────────────────────────────────────────────────────────────────────────
-BASE_DIR = Path(__file__).resolve().parent.parent
-if load_dotenv:
-    load_dotenv(BASE_DIR / ".env")
-
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-secret-key")
-DEBUG = os.getenv("DEBUG", "1") == "1"
+DEBUG = os.getenv("DEBUG", "0") == "1"
 
-# Tighter default; override via env if needed
-ALLOWED_HOSTS = os.getenv(
-    "ALLOWED_HOSTS",
-    "127.0.0.1,localhost,protopiabackend-production.up.railway.app"
-).split(",")
+# BACKEND host(s)
+ALLOWED_HOSTS = [
+    "protopiabackend-production.up.railway.app",
+]
 
-# Frontend URL (used for CORS/CSRF allow-lists)
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000").rstrip("/")
-
+# ────────────────────────────────────────────────────────────────────────────────
+# Apps / Middleware
+# ────────────────────────────────────────────────────────────────────────────────
 INSTALLED_APPS = [
     "corsheaders",
     "django.contrib.admin",
@@ -48,10 +35,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    # corsheaders MUST be first
-    "corsheaders.middleware.CorsMiddleware",
+    "corsheaders.middleware.CorsMiddleware",  # must be first
     "django.middleware.security.SecurityMiddleware",
-    # Static files in production
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -82,13 +67,13 @@ TEMPLATES = [
 WSGI_APPLICATION = "protopia_backend.wsgi.application"
 
 # ────────────────────────────────────────────────────────────────────────────────
-# Database (prefer DATABASE_URL; fallback to SQLite)
+# Database (Railway DATABASE_URL or fallback SQLite)
 # ────────────────────────────────────────────────────────────────────────────────
 DATABASES = {
     "default": dj_database_url.config(
         default=os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
         conn_max_age=600,
-        ssl_require=False,  # Railway PG works without forcing SSL here
+        ssl_require=False,
     )
 }
 
@@ -116,56 +101,41 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-# Better compression/cache for static assets
 STORAGES = {
-    "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    }
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"}
 }
 
 # ────────────────────────────────────────────────────────────────────────────────
 # Auth
 # ────────────────────────────────────────────────────────────────────────────────
-AUTH_USER_MODEL = "accounts.User"  # custom email-based user
+AUTH_USER_MODEL = "accounts.User"
 
 # ────────────────────────────────────────────────────────────────────────────────
 # DRF / JWT
 # ────────────────────────────────────────────────────────────────────────────────
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
-    ),
+    "DEFAULT_AUTHENTICATION_CLASSES": ("rest_framework_simplejwt.authentication.JWTAuthentication",),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
 }
 
 # ────────────────────────────────────────────────────────────────────────────────
-# CORS / CSRF  (Vercel + Railway friendly)
+# CORS / CSRF — hardcoded for your production domains
 # ────────────────────────────────────────────────────────────────────────────────
-# Explicit allow-list for production safety
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOWED_ORIGINS = [
-    FRONTEND_URL,                     # e.g. https://protopia-frontend.vercel.app
+    "https://protopia-frontend.vercel.app",
 ]
 
-# Allow Vercel preview deployments too
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://.*\.vercel\.app$",
 ]
 
-# Allow Authorization header for JWT + common headers
-CORS_ALLOW_HEADERS = list(default_headers) + [
-    "Authorization",
-    "Content-Type",
-]
+CORS_ALLOW_HEADERS = list(default_headers) + ["Authorization", "Content-Type"]
 
-# CSRF: trust production and preview domains
 CSRF_TRUSTED_ORIGINS = [
-    FRONTEND_URL.replace("http://", "http://").replace("https://", "https://"),
-    "https://*.vercel.app",
-    "https://*.railway.app",
+    "https://protopia-frontend.vercel.app",
 ]
 
 # ────────────────────────────────────────────────────────────────────────────────
@@ -189,7 +159,7 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 
 # ────────────────────────────────────────────────────────────────────────────────
-# Cache (stores 6-digit codes)
+# Cache
 # ────────────────────────────────────────────────────────────────────────────────
 CACHES = {
     "default": {
